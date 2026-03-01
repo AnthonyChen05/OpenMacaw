@@ -79,7 +79,7 @@ export default function Permissions() {
 
   const updateToolPipMutation = useMutation({
     mutationFn: async ({ toolName, override }: { toolName: string; override: 'inherit' | 'enable' | 'disable' }) => {
-      const res = await apiFetch(`/api/permissions/${serverId}/tools/${toolName}/pip`, {
+      const res = await apiFetch(`/api/permissions/${serverId}/tool-pip/${toolName}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ override }),

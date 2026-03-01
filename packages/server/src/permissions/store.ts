@@ -52,7 +52,7 @@ export function getPermissionForServer(serverId: string): ServerPermission | nul
     maxCallsPerMinute: perm.maxCallsPerMinute,
     maxTokensPerCall: perm.maxTokensPerCall,
     promptInjectionPrevention: Boolean((perm as any).prompt_injection_prevention ?? (perm as any).promptInjectionPrevention ?? false),
-    toolPromptInjectionPrevention: JSON.parse((perm as any).tool_prompt_injection_prevention || '{}'),
+    toolPromptInjectionPrevention: JSON.parse((perm as any).toolPromptInjectionPrevention ?? (perm as any).tool_prompt_injection_prevention ?? '{}'),
     createdAt: new Date(perm.createdAt),
     updatedAt: new Date(perm.updatedAt),
   };
@@ -174,7 +174,7 @@ export function getAllPermissions(): ServerPermission[] {
     maxCallsPerMinute: perm.maxCallsPerMinute,
     maxTokensPerCall: perm.maxTokensPerCall,
     promptInjectionPrevention: Boolean((perm as any).prompt_injection_prevention ?? (perm as any).promptInjectionPrevention ?? false),
-    toolPromptInjectionPrevention: JSON.parse((perm as any).tool_prompt_injection_prevention || '{}'),
+    toolPromptInjectionPrevention: JSON.parse((perm as any).toolPromptInjectionPrevention ?? (perm as any).tool_prompt_injection_prevention ?? '{}'),
     createdAt: new Date(perm.createdAt),
     updatedAt: new Date(perm.updatedAt),
   }));

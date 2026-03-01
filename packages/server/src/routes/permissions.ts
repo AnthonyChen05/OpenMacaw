@@ -91,7 +91,7 @@ export async function permissionsRoutes(fastify: FastifyInstance): Promise<void>
     return reply.send(updated);
   });
 
-  fastify.patch('/api/permissions/:serverId/tools/:toolName/pip', async (request: FastifyRequest<{ Params: { serverId: string; toolName: string } }>, reply: FastifyReply) => {
+  fastify.patch('/api/permissions/:serverId/tool-pip/:toolName', async (request: FastifyRequest<{ Params: { serverId: string; toolName: string } }>, reply: FastifyReply) => {
     const { serverId, toolName } = request.params;
     const body = request.body as Record<string, unknown>;
     const override = body.override as 'inherit' | 'enable' | 'disable' | undefined;
