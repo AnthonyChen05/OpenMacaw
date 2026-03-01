@@ -15,6 +15,26 @@ const serverSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
+function normalizeArgs(argsStr?: string): string | undefined {
+  if (!argsStr || argsStr.trim() === '') return undefined;
+  try {
+    const parsed = JSON.parse(argsStr);
+    return Array.isArray(parsed) ? JSON.stringify(parsed) : JSON.stringify([String(parsed)]);
+  } catch {
+    return JSON.stringify(argsStr.split(' ').filter(Boolean));
+  }
+}
+
+function normalizeEnvVars(envStr?: string): string | undefined {
+  if (!envStr || envStr.trim() === '') return undefined;
+  try {
+    const parsed = JSON.parse(envStr);
+    return typeof parsed === 'object' && parsed !== null ? JSON.stringify(parsed) : undefined;
+  } catch {
+    return undefined; // Drop fundamentally broken env structs safely instead of string splitting 
+  }
+}
+
 export async function serversRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/api/servers', async (_request: FastifyRequest, reply: FastifyReply) => {
     const db = getDb();
@@ -47,13 +67,16 @@ export async function serversRoutes(fastify: FastifyInstance): Promise<void> {
     const now = Date.now();
     const id = nanoid();
 
+    const normalizedArgs = normalizeArgs(body.args);
+    const normalizedEnv = normalizeEnvVars(body.envVars);
+
     db.insert(schema.servers as any).values({
       id,
       name: body.name,
       transport: body.transport,
       command: body.command,
-      args: body.args,
-      env_vars: body.envVars,
+      args: normalizedArgs,
+      env_vars: normalizedEnv,
       url: body.url,
       enabled: 1,
       status: 'stopped',
@@ -66,8 +89,8 @@ export async function serversRoutes(fastify: FastifyInstance): Promise<void> {
       name: body.name,
       transport: body.transport,
       command: body.command,
-      args: body.args ? JSON.parse(body.args) : undefined,
-      envVars: body.envVars ? JSON.parse(body.envVars) : undefined,
+      args: normalizedArgs ? JSON.parse(normalizedArgs) : undefined,
+      envVars: normalizedEnv ? JSON.parse(normalizedEnv) : undefined,
       url: body.url,
     });
 
@@ -79,7 +102,7 @@ export async function serversRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/api/servers/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     const { id } = request.params;
     const db = getDb();
-    const servers = db.select(schema.servers as any).where(() => (getCol: (col: string) => any) => getCol('id') === id).all() as any[];
+    const servers = db.select(schema.servers as any).where((getCol: (col: string) => any) => getCol('id') === id).all() as any[];
 
     if (servers.length === 0) {
       return reply.code(404).send({ error: 'Server not found' });
@@ -113,8 +136,8 @@ export async function serversRoutes(fastify: FastifyInstance): Promise<void> {
     const updates: Record<string, unknown> = { updated_at: Date.now() };
     if (body.name) updates.name = body.name;
     if (body.command) updates.command = body.command;
-    if (body.args) updates.args = body.args;
-    if (body.envVars) updates.env_vars = body.envVars;
+    if (body.args !== undefined) updates.args = normalizeArgs(body.args);
+    if (body.envVars !== undefined) updates.env_vars = normalizeEnvVars(body.envVars);
     if (body.url) updates.url = body.url;
     if (body.transport) updates.transport = body.transport;
     if (body.enabled !== undefined) updates.enabled = body.enabled ? 1 : 0;
@@ -131,9 +154,9 @@ export async function serversRoutes(fastify: FastifyInstance): Promise<void> {
     await removeServer(id);
     
     const db = getDb();
-    const servers = db.select(schema.servers as any).where(() => (getCol: (col: string) => any) => getCol('id') === id).all() as any[];
+    const servers = db.select(schema.servers as any).where((getCol: (col: string) => any) => getCol('id') === id).all() as any[];
     if (servers.length > 0) {
-      db.delete(schema.servers as any).where(() => () => true);
+      db.delete(schema.servers as any).where((getCol: (col: string) => unknown) => getCol('id') === id);
     }
 
     return reply.send({ success: true });

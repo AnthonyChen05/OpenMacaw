@@ -18,6 +18,8 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Settings>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
 
   const { data: settings, isLoading } = useQuery<Settings>({
     queryKey: ['settings'],
@@ -49,6 +51,21 @@ export default function Settings() {
   const handleSave = () => {
     setSaveStatus('saving');
     saveMutation.mutate(formData);
+  };
+
+  const fetchOllamaModels = async () => {
+    setFetchingModels(true);
+    try {
+      const res = await apiFetch('/api/ollama/tags');
+      const data = await res.json();
+      if (data.models) {
+        setAvailableModels(data.models.map((m: any) => m.name));
+      }
+    } catch (e) {
+      console.error('Failed to fetch Ollama models', e);
+    } finally {
+      setFetchingModels(false);
+    }
   };
 
   if (isLoading) {
@@ -131,14 +148,39 @@ export default function Settings() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Model</label>
-              <input
-                type="text"
-                value={formData.DEFAULT_MODEL || ''}
-                onChange={(e) => setFormData({ ...formData, DEFAULT_MODEL: e.target.value })}
-                placeholder="claude-3-5-sonnet-20241022"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Default Model</label>
+                {formData.DEFAULT_PROVIDER === 'ollama' && (
+                  <button
+                    onClick={fetchOllamaModels}
+                    disabled={fetchingModels}
+                    className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {fetchingModels && <Loader2 className="w-3 h-3 animate-spin" />}
+                    Refresh Local Models
+                  </button>
+                )}
+              </div>
+              {availableModels.length > 0 && formData.DEFAULT_PROVIDER === 'ollama' ? (
+                <select
+                  value={formData.DEFAULT_MODEL || ''}
+                  onChange={(e) => setFormData({ ...formData, DEFAULT_MODEL: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                >
+                  <option value="">Select a model...</option>
+                  {availableModels.map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={formData.DEFAULT_MODEL || ''}
+                  onChange={(e) => setFormData({ ...formData, DEFAULT_MODEL: e.target.value })}
+                  placeholder="claude-3-5-sonnet-20241022"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Steps</label>

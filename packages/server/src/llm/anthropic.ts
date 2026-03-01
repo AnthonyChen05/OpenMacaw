@@ -39,14 +39,14 @@ export class AnthropicProvider implements LLMProvider {
     const systemMessage = messages.find(m => m.role === 'system');
     const nonSystemMessages = messages.filter(m => m.role !== 'system');
 
-    const anthropicMessages = nonSystemMessages.map(msg => {
+    const anthropicMessages = nonSystemMessages.map((msg): Anthropic.MessageParam => {
       if (msg.role === 'tool') {
         return {
-          role: 'user' as const,
+          role: 'user',
           content: [
             {
-              type: 'tool_result' as const,
-              tool_use_id: msg.toolCallId,
+              type: 'tool_result',
+              tool_use_id: msg.toolCallId || 'unknown',
               content: msg.content,
             }
           ]
@@ -58,10 +58,13 @@ export class AnthropicProvider implements LLMProvider {
       };
     });
 
-    const toolUse = tools.map(tool => ({
+    const toolUse: Anthropic.Tool[] = tools.map(tool => ({
       name: tool.name,
       description: tool.description,
-      input_schema: tool.inputSchema,
+      input_schema: {
+        type: 'object',
+        properties: (tool.inputSchema as any)?.properties || {},
+      },
     }));
 
     let inputTokens = 0;

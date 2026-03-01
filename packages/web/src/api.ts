@@ -1,5 +1,14 @@
 export const API_BASE = import.meta.env.VITE_API_URL || window.location.origin;
 
+export type AgentEvent =
+  | { type: 'text_delta'; content: string }
+  | { type: 'tool_call_start'; tool: string; server: string; input: Record<string, unknown> }
+  | { type: 'tool_call_result'; outcome: 'allowed' | 'denied'; result?: unknown; reason?: string }
+  | { type: 'message_end'; usage: { inputTokens: number; outputTokens: number } }
+  | { type: 'proposal'; tool: string; input: Record<string, unknown> }
+  | { type: 'error'; message: string }
+  | { type: 'step_count'; count: number };
+
 export async function apiFetch(endpoint: string, options?: RequestInit) {
   // Ensure endpoint starts with a slash
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;

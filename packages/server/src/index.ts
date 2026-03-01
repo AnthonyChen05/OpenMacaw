@@ -7,20 +7,23 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { loadConfig } from './config.js';
 import { initDatabase } from './db/index.js';
+import { restoreConnections, migrateServerArguments } from './mcp/index.js';
 import {
   serversRoutes,
   permissionsRoutes,
   sessionsRoutes,
   settingsRoutes,
   activityRoutes,
-  chatRoutes
+  chatRoutes,
+  executeRoutes,
+  ollamaRoutes
 } from './routes/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function buildApp() {
-  const config = loadConfig();
+  loadConfig();
 
   const fastify = Fastify({ logger: false });
 
@@ -34,6 +37,8 @@ async function buildApp() {
   await fastify.register(settingsRoutes);
   await fastify.register(activityRoutes);
   await fastify.register(chatRoutes);
+  await fastify.register(executeRoutes);
+  await fastify.register(ollamaRoutes);
 
   // Serve built frontend
   const frontendPath = join(__dirname, '../../web/dist');
@@ -55,7 +60,7 @@ async function buildApp() {
 
     // SPA catch-all — serves index.html for every non-API route so deep links and refreshes work.
     // Reads from disk each time so a frontend rebuild is picked up without restarting the server.
-    fastify.get('/*', async (request, reply) => {
+    fastify.get('/*', async (_request, reply) => {
       if (existsSync(indexPath)) {
         const indexHtml = readFileSync(indexPath, 'utf-8');
         return reply
@@ -82,6 +87,17 @@ async function start() {
 
     await app.listen({ port: config.PORT, host: '0.0.0.0' });
     console.log(`\nOpenMacaw running at http://localhost:${config.PORT}\n`);
+
+    // Async trigger MCP auto-reconnection in the background 
+    // without blocking the main Fastify loop
+    (async () => {
+      try {
+        await migrateServerArguments();
+        await restoreConnections();
+      } catch (err) {
+        console.error('Fatal failure during background MCP restoration:', err);
+      }
+    })();
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);
@@ -89,3 +105,4 @@ async function start() {
 }
 
 start();
+

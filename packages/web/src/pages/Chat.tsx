@@ -4,7 +4,80 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Trash2, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { apiFetch, getWsUrl } from '../api';
+import { apiFetch, getWsUrl, type AgentEvent } from '../api';
+
+function ApprovalCard({ toolCalls, onApprove, onReject }: { toolCalls: string, onApprove: () => void, onReject: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [executed, setExecuted] = useState(false);
+  let calls: any[] = [];
+  try { calls = JSON.parse(toolCalls); } catch (e) {}
+  if (!Array.isArray(calls)) calls = [calls];
+
+  const handleApprove = async () => {
+    setLoading(true);
+    window.dispatchEvent(new CustomEvent('openmacaw:executing', { detail: { action: 'START', calls } }));
+    try {
+      await apiFetch('/api/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toolCalls: calls,
+          user_approved: true
+        })
+      });
+      setExecuted(true);
+      window.dispatchEvent(new CustomEvent('openmacaw:executing', { detail: { action: 'SUCCESS', calls } }));
+      setTimeout(() => onApprove(), 1500);
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('openmacaw:executing', { detail: { action: 'FAILED', calls, error: String(e) } }));
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isDestructive = calls.some(c => c.name?.toLowerCase().match(/delete|remove|drop/));
+
+  if (executed) {
+    return (
+      <div className="mt-3 bg-green-950/20 border border-green-500/20 rounded-md p-3 flex items-center justify-between">
+        <span className="text-[10px] font-mono text-green-500 uppercase tracking-wider">Executed Successfully</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 bg-zinc-950 border border-white/10 rounded-md overflow-hidden shadow-2xl backdrop-blur-md">
+      {isDestructive && (
+        <div className="bg-rose-500/10 border-b border-rose-500/20 px-3 py-2 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+          <span className="text-[10px] font-mono text-rose-500 uppercase tracking-wider font-bold">Warning: Destructive Action</span>
+        </div>
+      )}
+      <div className="p-3">
+        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-2">Proposed Actions</p>
+        <div className="space-y-2 mb-3">
+          {calls.map((call, i) => (
+            <div key={i} className="bg-black border border-white/5 rounded p-2 font-mono text-xs">
+              <div className="text-cyan-400 mb-1">{call.name}</div>
+              <div className="text-gray-500 text-[10px] break-all">{JSON.stringify(call.arguments)}</div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onReject} disabled={loading} className="flex-1 px-3 py-1.5 bg-black border border-white/10 hover:bg-white/5 text-gray-400 hover:text-white text-[10px] font-bold font-mono uppercase tracking-wider rounded transition-colors disabled:opacity-50">
+            Deny
+          </button>
+          <button onClick={handleApprove} disabled={loading} className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-cyan-950/30 border border-cyan-500/50 hover:bg-cyan-900/40 text-cyan-400 hover:text-cyan-300 text-[10px] font-bold font-mono uppercase tracking-wider rounded transition-all shadow-[0_0_15px_rgba(6,182,212,0.15)] hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:shadow-none">
+            {loading && <Loader2 className="w-3 h-3 animate-spin inline" />}
+            {loading ? 'Executing...' : 'Approve & Execute'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface Message {
   id: string;
@@ -22,19 +95,6 @@ interface Session {
   messages: Message[];
 }
 
-interface ChatEvent {
-  type: 'text_delta' | 'tool_call_start' | 'tool_call_result' | 'message_end' | 'error' | 'step_count';
-  content?: string;
-  tool?: string;
-  server?: string;
-  input?: Record<string, unknown>;
-  outcome?: 'allowed' | 'denied';
-  result?: unknown;
-  reason?: string;
-  usage?: { inputTokens: number; outputTokens: number };
-  message?: string;
-  count?: number;
-}
 
 export default function Chat() {
   const { id: sessionId } = useParams<{ id: string }>();
@@ -42,6 +102,7 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [mockMessages, setMockMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const queryClient = useQueryClient();
@@ -115,7 +176,7 @@ export default function Chat() {
     };
 
     ws.onmessage = (event) => {
-      const data: ChatEvent = JSON.parse(event.data);
+      const data: AgentEvent = JSON.parse(event.data);
 
       switch (data.type) {
         case 'text_delta':
@@ -136,7 +197,29 @@ export default function Chat() {
           setStreamingContent('');
           queryClient.invalidateQueries({ queryKey: ['session', currentSessionId] });
           break;
-        case 'error':
+          case 'proposal':
+            console.log('[WebSocket] Received proposal:', data);
+            queryClient.setQueryData(['session', sessionId], (old: any) => {
+              if (!old) return old;
+              
+              // We construct an artificial assistant message holding the tool calls payload. 
+              // React will see `toolCalls` and render `ApprovalCard`.
+              return {
+                ...old,
+                messages: [
+                  ...old.messages,
+                  {
+                    id: `proposal-${Date.now()}`,
+                    role: 'assistant',
+                    content: `I propose executing ${data.tool}. Please authorize the action.`,
+                    toolCalls: JSON.stringify([{ name: data.tool, arguments: data.input }])
+                  }
+                ]
+              };
+            });
+            break;
+            
+          case 'error':
           setIsStreaming(false);
           setStreamingContent(prev => prev + `\n[Error: ${data.message}]`);
           break;
@@ -229,19 +312,19 @@ export default function Chat() {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-black">
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {!currentSessionId ? (
-            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+            <div className="flex items-center justify-center h-full text-gray-500 font-mono text-sm">
               Select or create a conversation to start
             </div>
           ) : sessionLoading ? (
             <div className="flex items-center justify-center h-full">
-              <Loader2 className="w-6 h-6 animate-spin text-gray-400 dark:text-gray-500" />
+              <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
             </div>
           ) : allMessages.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-              Send a message to start the conversation
+            <div className="flex items-center justify-center h-full text-gray-500 font-mono text-sm">
+              [System] Ready for input
             </div>
           ) : (
             allMessages.map(msg => (
@@ -250,22 +333,34 @@ export default function Chat() {
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-2xl px-4 py-2 rounded-lg ${
+                  className={`max-w-2xl px-3 py-2 rounded-md ${
                     msg.role === 'user'
-                      ? 'bg-cyan-600 text-white'
+                      ? 'bg-zinc-800 text-gray-200 border border-white/5'
                       : msg.role === 'tool'
-                      ? 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/20'
-                      : 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-gray-100'
+                      ? 'bg-zinc-950 text-gray-400 border border-white/5 font-mono text-xs'
+                      : 'bg-transparent text-gray-300'
                   }`}
                 >
-                  {msg.role === 'user' ? (
+                  {msg.role === 'user' || msg.role === 'tool' ? (
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   ) : (
-                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:bg-gray-200 dark:prose-code:bg-zinc-700/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
+                    <div className="text-sm prose prose-sm prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-sm prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-white/5 prose-pre:text-gray-300">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {msg.content}
                       </ReactMarkdown>
                     </div>
+                  )}
+
+                  {msg.toolCalls && (
+                    <ApprovalCard 
+                      toolCalls={msg.toolCalls} 
+                      onApprove={() => { /* Real approval logic hides the card or displays executed, implemented natively via state in ApprovalCard */}} 
+                      onReject={() => { 
+                         // To "Deny", for now, we just skip it or refresh state. 
+                         // To fully deny we might inform the LLM in next task. 
+                         alert('Execution denied by user');
+                      }} 
+                    />
                   )}
                 </div>
               </div>
@@ -274,26 +369,26 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-950/50 backdrop-blur-md">
+        <div className="p-3 border-t border-white/5 bg-black">
           <div className="flex gap-2 max-w-4xl mx-auto">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your message..."
-              className="flex-1 px-4 py-3 border border-gray-300 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 text-gray-900 dark:text-white rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-sm"
+              className="flex-1 px-3 py-2.5 bg-zinc-950 border border-white/10 text-gray-200 rounded-md resize-none focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 shadow-sm text-sm"
               rows={1}
               disabled={isStreaming}
             />
             <button
               onClick={sendMessage}
               disabled={!input.trim() || isStreaming}
-              className="px-4 py-2 bg-cyan-600 text-white rounded-xl hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
+              className="px-4 py-2 bg-white text-black rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors flex items-center justify-center"
             >
               {isStreaming ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Send className="w-5 h-5" />
+                <Send className="w-4 h-4" />
               )}
             </button>
           </div>

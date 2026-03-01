@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { FORCEFUL_SYSTEM_PROMPT } from './agent/prompts.js';
 
 const configSchema = z.object({
   PORT: z.coerce.number().default(3000),
@@ -16,7 +17,7 @@ const configSchema = z.object({
   MAX_STEPS: z.coerce.number().default(50),
   TEMPERATURE: z.coerce.number().default(1.0),
   
-  SYSTEM_PROMPT: z.string().default('You are a helpful AI assistant with access to various tools.'),
+  SYSTEM_PROMPT: z.string().default(FORCEFUL_SYSTEM_PROMPT),
 });
 
 export type Config = z.infer<typeof configSchema>;

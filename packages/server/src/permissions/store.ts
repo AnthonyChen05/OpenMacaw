@@ -25,7 +25,7 @@ export interface ServerPermission {
 
 export function getPermissionForServer(serverId: string): ServerPermission | null {
   const db = getDb();
-  const perms = db.select(schema.permissions as any).where((getCol: (col: string) => any) => getCol('server_id') === serverId).all() as any[];
+  const perms = db.select(schema.permissions as any).where((getCol: (col: string) => any) => getCol('serverId') === serverId).all() as any[];
   
   if (perms.length === 0) return null;
   
@@ -33,24 +33,24 @@ export function getPermissionForServer(serverId: string): ServerPermission | nul
   
   return {
     id: perm.id,
-    serverId: perm.server_id,
-    allowedPaths: JSON.parse(perm.allowed_paths || '[]'),
-    deniedPaths: JSON.parse(perm.denied_paths || '[]'),
-    pathRead: Boolean(perm.path_read),
-    pathWrite: Boolean(perm.path_write),
-    pathCreate: Boolean(perm.path_create),
-    pathDelete: Boolean(perm.path_delete),
-    pathListDir: Boolean(perm.path_list_dir),
-    bashAllowed: Boolean(perm.bash_allowed),
-    bashAllowedCommands: JSON.parse(perm.bash_allowed_commands || '[]'),
-    webfetchAllowed: Boolean(perm.webfetch_allowed),
-    webfetchAllowedDomains: JSON.parse(perm.webfetch_allowed_domains || '[]'),
-    subprocessAllowed: Boolean(perm.subprocess_allowed),
-    networkAllowed: Boolean(perm.network_allowed),
-    maxCallsPerMinute: perm.max_calls_per_minute,
-    maxTokensPerCall: perm.max_tokens_per_call,
-    createdAt: new Date(perm.created_at),
-    updatedAt: new Date(perm.updated_at),
+    serverId: perm.serverId,
+    allowedPaths: JSON.parse(perm.allowedPaths || '[]'),
+    deniedPaths: JSON.parse(perm.deniedPaths || '[]'),
+    pathRead: Boolean(perm.pathRead),
+    pathWrite: Boolean(perm.pathWrite),
+    pathCreate: Boolean(perm.pathCreate),
+    pathDelete: Boolean(perm.pathDelete),
+    pathListDir: Boolean(perm.pathListDir),
+    bashAllowed: Boolean(perm.bashAllowed),
+    bashAllowedCommands: JSON.parse(perm.bashAllowedCommands || '[]'),
+    webfetchAllowed: Boolean(perm.webfetchAllowed),
+    webfetchAllowedDomains: JSON.parse(perm.webfetchAllowedDomains || '[]'),
+    subprocessAllowed: Boolean(perm.subprocessAllowed),
+    networkAllowed: Boolean(perm.networkAllowed),
+    maxCallsPerMinute: perm.maxCallsPerMinute,
+    maxTokensPerCall: perm.maxTokensPerCall,
+    createdAt: new Date(perm.createdAt),
+    updatedAt: new Date(perm.updatedAt),
   };
 }
 
@@ -62,19 +62,19 @@ export async function createDefaultPermission(serverId: string): Promise<ServerP
   const perm = {
     id,
     serverId,
-    allowed_paths: JSON.stringify([]),
+    allowed_paths: JSON.stringify(['/']),
     denied_paths: JSON.stringify([]),
-    path_read: 0,
-    path_write: 0,
-    path_create: 0,
-    path_delete: 0,
-    path_list_dir: 0,
-    bash_allowed: 0,
-    bash_allowed_commands: JSON.stringify([]),
-    webfetch_allowed: 0,
-    webfetch_allowed_domains: JSON.stringify([]),
-    subprocess_allowed: 0,
-    network_allowed: 0,
+    path_read: 1,
+    path_write: 1,
+    path_create: 1,
+    path_delete: 1,
+    path_list_dir: 1,
+    bash_allowed: 1,
+    bash_allowed_commands: JSON.stringify(['*']),
+    webfetch_allowed: 1,
+    webfetch_allowed_domains: JSON.stringify(['*']),
+    subprocess_allowed: 1,
+    network_allowed: 1,
     max_calls_per_minute: 30,
     max_tokens_per_call: 100000,
     created_at: now,
@@ -85,19 +85,21 @@ export async function createDefaultPermission(serverId: string): Promise<ServerP
   
   return {
     ...perm,
-    allowedPaths: [],
+    allowedPaths: ['/'],
     deniedPaths: [],
-    bashAllowedCommands: [],
-    webfetchAllowedDomains: [],
-    pathRead: false,
-    pathWrite: false,
-    pathCreate: false,
-    pathDelete: false,
-    pathListDir: false,
-    bashAllowed: false,
-    webfetchAllowed: false,
-    subprocessAllowed: false,
-    networkAllowed: false,
+    bashAllowedCommands: ['*'],
+    webfetchAllowedDomains: ['*'],
+    pathRead: true,
+    pathWrite: true,
+    pathCreate: true,
+    pathDelete: true,
+    pathListDir: true,
+    bashAllowed: true,
+    webfetchAllowed: true,
+    subprocessAllowed: true,
+    networkAllowed: true,
+    maxCallsPerMinute: 30,
+    maxTokensPerCall: 100000,
     createdAt: new Date(now),
     updatedAt: new Date(now),
   } as ServerPermission;
@@ -123,7 +125,7 @@ export async function updatePermission(serverId: string, updates: Partial<Server
   if (updates.maxCallsPerMinute !== undefined) dbUpdates.max_calls_per_minute = updates.maxCallsPerMinute;
   if (updates.maxTokensPerCall !== undefined) dbUpdates.max_tokens_per_call = updates.maxTokensPerCall;
 
-  db.update(schema.permissions as any).set(dbUpdates).where(() => () => true);
+  db.update(schema.permissions as any).set(dbUpdates).where((getCol: (col: string) => unknown) => getCol('serverId') === serverId);
   
   const perm = getPermissionForServer(serverId);
   if (!perm) throw new Error('Permission not found after update');
@@ -132,7 +134,7 @@ export async function updatePermission(serverId: string, updates: Partial<Server
 
 export async function deletePermission(serverId: string): Promise<void> {
   const db = getDb();
-  db.delete(schema.permissions as any).where(() => () => true);
+  db.delete(schema.permissions as any).where((getCol: (col: string) => unknown) => getCol('serverId') === serverId);
 }
 
 export function getAllPermissions(): ServerPermission[] {
@@ -141,23 +143,23 @@ export function getAllPermissions(): ServerPermission[] {
   
   return perms.map(perm => ({
     id: perm.id,
-    serverId: perm.server_id,
-    allowedPaths: JSON.parse(perm.allowed_paths || '[]'),
-    deniedPaths: JSON.parse(perm.denied_paths || '[]'),
-    pathRead: Boolean(perm.path_read),
-    pathWrite: Boolean(perm.path_write),
-    pathCreate: Boolean(perm.path_create),
-    pathDelete: Boolean(perm.path_delete),
-    pathListDir: Boolean(perm.path_list_dir),
-    bashAllowed: Boolean(perm.bash_allowed),
-    bashAllowedCommands: JSON.parse(perm.bash_allowed_commands || '[]'),
-    webfetchAllowed: Boolean(perm.webfetch_allowed),
-    webfetchAllowedDomains: JSON.parse(perm.webfetch_allowed_domains || '[]'),
-    subprocessAllowed: Boolean(perm.subprocess_allowed),
-    networkAllowed: Boolean(perm.network_allowed),
-    maxCallsPerMinute: perm.max_calls_per_minute,
-    maxTokensPerCall: perm.max_tokens_per_call,
-    createdAt: new Date(perm.created_at),
-    updatedAt: new Date(perm.updated_at),
+    serverId: perm.serverId,
+    allowedPaths: JSON.parse(perm.allowedPaths || '[]'),
+    deniedPaths: JSON.parse(perm.deniedPaths || '[]'),
+    pathRead: Boolean(perm.pathRead),
+    pathWrite: Boolean(perm.pathWrite),
+    pathCreate: Boolean(perm.pathCreate),
+    pathDelete: Boolean(perm.pathDelete),
+    pathListDir: Boolean(perm.pathListDir),
+    bashAllowed: Boolean(perm.bashAllowed),
+    bashAllowedCommands: JSON.parse(perm.bashAllowedCommands || '[]'),
+    webfetchAllowed: Boolean(perm.webfetchAllowed),
+    webfetchAllowedDomains: JSON.parse(perm.webfetchAllowedDomains || '[]'),
+    subprocessAllowed: Boolean(perm.subprocessAllowed),
+    networkAllowed: Boolean(perm.networkAllowed),
+    maxCallsPerMinute: perm.maxCallsPerMinute,
+    maxTokensPerCall: perm.maxTokensPerCall,
+    createdAt: new Date(perm.createdAt),
+    updatedAt: new Date(perm.updatedAt),
   }));
 }

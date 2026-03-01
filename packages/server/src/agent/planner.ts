@@ -1,4 +1,3 @@
-import type { Message } from '../llm/provider.js';
 import { getConfig } from '../config.js';
 
 export interface PlanStep {
@@ -27,7 +26,7 @@ export function createPlan(goal: string): Plan {
   };
 }
 
-export function generatePlanPrompt(goal: string): string {
+export function generatePlanPrompt(_goal: string): string {
   const config = getConfig();
   return `${config.SYSTEM_PROMPT}
 

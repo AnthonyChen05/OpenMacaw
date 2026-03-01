@@ -7,6 +7,8 @@ export {
   getServerTools, 
   getAllTools,
   removeServer,
-  getMCPServer 
+  getMCPServer,
+  restoreConnections,
+  migrateServerArguments
 } from './registry.js';
 export type { MCPServerInfo, ServerStatus } from './registry.js';

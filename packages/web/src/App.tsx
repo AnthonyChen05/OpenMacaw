@@ -101,77 +101,75 @@ function AgentPanel({ isOpen, onClose, isCollapsed }: { isOpen: boolean; onClose
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/25 z-40 backdrop-blur-sm" onClick={onClose} />
-      <div className={`fixed top-0 h-full w-full max-w-sm bg-zinc-50 dark:bg-zinc-950 shadow-2xl z-50 flex flex-col transition-all duration-200 ease-in-out ${
-        isCollapsed ? 'left-0 md:left-14' : 'left-0 md:left-56'
-      }`}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
+      <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed top-0 left-0 h-full w-full max-w-sm bg-zinc-950 border-r border-white/5 shadow-2xl z-50 flex flex-col transition-all duration-200 ease-in-out">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-cyan-500/10 rounded-lg">
+            <div className="p-1.5 bg-cyan-950/30 rounded-md">
               <Bot className="w-4 h-4 text-cyan-500" />
             </div>
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Configure Agent</h2>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono">Configure Agent</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
-            <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-md transition-colors">
+            <X className="w-4 h-4 text-gray-500 hover:text-white" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+        <div className="flex-1 overflow-y-auto divide-y divide-white/5">
           {/* Identity */}
-          <div className="px-5 py-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Identity</p>
+          <div className="px-4 py-4">
+            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-3">Identity</p>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Agent Name</label>
+                <label className="block text-xs font-mono text-gray-400 mb-1">Agent Name</label>
                 <input
                   type="text"
                   value={form.AGENT_NAME}
                   onChange={(e) => setForm({ ...form, AGENT_NAME: e.target.value })}
                   placeholder="My Assistant"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-1.5 bg-black border border-white/10 rounded-md text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-xs font-mono text-gray-400 mb-1">Description</label>
                 <input
                   type="text"
                   value={form.AGENT_DESCRIPTION}
                   onChange={(e) => setForm({ ...form, AGENT_DESCRIPTION: e.target.value })}
                   placeholder="A helpful coding assistant..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-1.5 bg-black border border-white/10 rounded-md text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500"
                 />
               </div>
             </div>
           </div>
 
           {/* Personality */}
-          <div className="px-5 py-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Personality</p>
+          <div className="px-4 py-4">
+            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-3">Personality</p>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">System Prompt</label>
+                <label className="block text-xs font-mono text-gray-400 mb-1">System Prompt</label>
                 <textarea
                   value={form.SYSTEM_PROMPT}
                   onChange={(e) => setForm({ ...form, SYSTEM_PROMPT: e.target.value })}
                   placeholder="You are a helpful AI assistant..."
                   rows={5}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-1.5 bg-black border border-white/10 rounded-md text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 resize-none font-mono"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                  <label className="block text-xs font-mono text-gray-400 mb-1">Model</label>
                   <input
                     type="text"
                     value={form.DEFAULT_MODEL}
                     onChange={(e) => setForm({ ...form, DEFAULT_MODEL: e.target.value })}
                     placeholder="claude-haiku-4-5"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-1.5 bg-black border border-white/10 rounded-md text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
+                  <label className="block text-xs font-mono text-gray-400 mb-1">Temperature</label>
                   <input
                     type="number"
                     step="0.1"
@@ -179,60 +177,54 @@ function AgentPanel({ isOpen, onClose, isCollapsed }: { isOpen: boolean; onClose
                     max="2"
                     value={form.TEMPERATURE}
                     onChange={(e) => setForm({ ...form, TEMPERATURE: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-1.5 bg-black border border-white/10 rounded-md text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 font-mono"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Steps</label>
+                <label className="block text-xs font-mono text-gray-400 mb-1">Max Steps</label>
                 <input
                   type="number"
                   value={form.MAX_STEPS}
                   onChange={(e) => setForm({ ...form, MAX_STEPS: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-3 py-1.5 bg-black border border-white/10 rounded-md text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 font-mono"
                 />
               </div>
             </div>
           </div>
 
           {/* MCP Servers & Skills */}
-          <div className="px-5 py-5">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">MCP Servers &amp; Skills</p>
+          <div className="px-4 py-4">
+            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-3">MCP Servers &amp; Skills</p>
             {serversLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
               </div>
             ) : !servers || servers.length === 0 ? (
-              <div className="py-6 text-center">
-                <p className="text-sm text-gray-500 mb-2">No MCP servers configured.</p>
-                <Link to="/servers" onClick={onClose} className="text-sm text-purple-600 hover:underline font-medium">
-                  Add a server →
+              <div className="py-4 text-center border border-white/5 border-dashed rounded-md bg-white/[0.02]">
+                <p className="text-xs text-gray-500 mb-1">No MCP servers configured.</p>
+                <Link to="/servers" onClick={onClose} className="text-xs text-cyan-500 hover:text-cyan-400 font-mono">
+                  Add server &rarr;
                 </Link>
               </div>
             ) : (
               <div className="space-y-2">
                 {servers.map((server) => (
-                  <div key={server.id} className="flex items-center justify-between py-3 px-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <div key={server.id} className="flex items-center justify-between py-2 px-3 bg-black border border-white/5 rounded-md hover:bg-white/[0.02]">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">{server.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+                      <p className="text-sm font-mono text-gray-300 truncate">{server.name}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-1.5 uppercase font-mono tracking-wider">
                         {server.toolCount} tools &middot; {server.transport}
-                        {server.status === 'running' && (
-                          <>
-                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block" />
-                            <span>running</span>
-                          </>
-                        )}
                       </p>
                     </div>
                     <button
                       onClick={() => toggleServer.mutate({ id: server.id, enabled: !server.enabled })}
-                      className={`ml-4 relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        server.enabled ? 'bg-purple-600' : 'bg-gray-200'
+                      className={`ml-3 relative inline-flex h-4 w-7 flex-shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        server.enabled ? 'bg-cyan-600' : 'bg-gray-800'
                       }`}
                     >
-                      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        server.enabled ? 'translate-x-4' : 'translate-x-0'
+                      <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white transition duration-200 ease-in-out mt-[1px] ml-[1px] ${
+                        server.enabled ? 'translate-x-3' : 'translate-x-0'
                       }`} />
                     </button>
                   </div>
@@ -242,14 +234,14 @@ function AgentPanel({ isOpen, onClose, isCollapsed }: { isOpen: boolean; onClose
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-900/50">
+        <div className="px-4 py-3 border-t border-white/5 bg-black">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-600 text-white rounded-xl hover:bg-cyan-500 disabled:opacity-50 text-sm font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white text-black rounded-md hover:bg-gray-200 disabled:opacity-50 text-sm font-bold font-mono uppercase tracking-wider transition-colors"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saved ? '✓ Saved!' : 'Save Changes'}
+            {saved ? 'Saved' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -261,151 +253,80 @@ function AgentPanel({ isOpen, onClose, isCollapsed }: { isOpen: boolean; onClose
 
 function App() {
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);   // desktop collapse
-  const [isMobileOpen, setIsMobileOpen] = useState(false); // mobile overlay
   const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false);
-  const [isDark, setIsDark] = useState(() => {
-    const savedTheme = localStorage.getItem('openmacaw-theme');
-    if (savedTheme) {
-      return savedTheme === 'dark';
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
+  const [executionLogs, setExecutionLogs] = useState<{ id: string, time: string, message: string, type: 'info' | 'success' | 'error' }[]>([]);
 
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('openmacaw-theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('openmacaw-theme', 'light');
-    }
-  }, [isDark]);
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('openmacaw-theme', 'dark');
 
-  // Close mobile menu on navigation
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [location.pathname]);
+    const handleExecution = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { action, calls, error } = customEvent.detail;
+      const time = new Date().toISOString().split('T')[1].split('.')[0];
+      
+      const newLogs = calls.map((c: any, i: number) => {
+        let message = '';
+        let type: 'info' | 'success' | 'error' = 'info';
+        
+        if (action === 'START') {
+          message = `Executing ${c.name}...`;
+        } else if (action === 'SUCCESS') {
+          message = `${c.name} completed successfully.`;
+          type = 'success';
+        } else if (action === 'FAILED') {
+          message = `${c.name} failed: ${error}`;
+          type = 'error';
+        }
+
+        return {
+          id: `${Date.now()}-${i}`,
+          time,
+          message,
+          type
+        };
+      });
+
+      setExecutionLogs(prev => [...prev, ...newLogs].slice(-50)); // Keep last 50 logs
+    };
+
+    window.addEventListener('openmacaw:executing', handleExecution);
+    return () => window.removeEventListener('openmacaw:executing', handleExecution);
+  }, []);
 
   const navItems = [
     { path: '/chat', label: 'Chat', icon: MessageSquare },
     { path: '/servers', label: 'Servers', icon: Server },
-    { path: '/activity', label: 'Activity', icon: Activity },
+    { path: '/activity', label: 'Audit Log', icon: Activity },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
   const handleNewChat = () => {
     window.dispatchEvent(new CustomEvent('openmacaw:new-chat'));
-    setIsMobileOpen(false);
   };
 
-  const openAgentPanel = () => {
-    setIsMobileOpen(false);
-    setIsAgentPanelOpen(true);
-  };
+  const { data: servers } = useQuery<McpServer[]>({
+    queryKey: ['servers'],
+    queryFn: async () => {
+      const res = await apiFetch('/api/servers');
+      return res.json();
+    }
+  });
 
   return (
     <>
-      <AgentPanel isOpen={isAgentPanelOpen} onClose={() => setIsAgentPanelOpen(false)} isCollapsed={isCollapsed} />
+      <AgentPanel isOpen={isAgentPanelOpen} onClose={() => setIsAgentPanelOpen(false)} isCollapsed={false} />
 
-      <div className="flex h-screen bg-gray-50 dark:bg-guardian-bg text-gray-900 dark:text-white transition-colors duration-200">
+      <div className="flex h-screen bg-black text-gray-200 overflow-hidden font-sans">
 
-        {/* ── Mobile top bar ── */}
-        <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-gray-200 dark:border-white/10 flex items-center px-4 gap-3">
-          <button
-            onClick={() => setIsMobileOpen(true)}
-            className="p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-cyan-500" />
-            <span className="font-bold text-gray-900 dark:text-white">OpenMacaw</span>
-          </div>
-          {/* New chat shortcut on mobile when on /chat */}
-          {location.pathname.startsWith('/chat') && (
-            <button
-              onClick={handleNewChat}
-              className="ml-auto p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-              title="New Chat"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-
-        {/* ── Mobile backdrop ── */}
-        {isMobileOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 z-40 md:hidden"
-            onClick={() => setIsMobileOpen(false)}
-          />
-        )}
-
-        {/* ── Sidebar ── */}
-        <aside
-          className={[
-            // Base layout & styling
-            'bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-md border-r border-gray-200 dark:border-white/10 flex flex-col overflow-hidden shrink-0',
-            // Mobile: fixed overlay, slides in/out
-            'fixed inset-y-0 left-0 z-50',
-            isMobileOpen ? 'translate-x-0' : '-translate-x-full',
-            'w-72',
-            // Desktop: relative, collapsible width, always visible
-            'md:relative md:translate-x-0',
-            isCollapsed ? 'md:w-14' : 'md:w-56',
-            // Transitions
-            'transition-transform md:transition-all duration-200 ease-in-out',
-          ].join(' ')}
-        >
-          {/* Logo — desktop only (mobile has top bar) */}
-          <div className={`hidden md:flex items-center h-14 px-3 border-b border-gray-200 dark:border-white/10 ${isCollapsed ? 'justify-center' : 'gap-2.5'}`}>
-            <Shield className="w-5 h-5 text-cyan-500 shrink-0" />
-            {!isCollapsed && <span className="text-base font-bold text-gray-900 dark:text-white truncate">OpenMacaw</span>}
+        {/* ── Left Pane (Thin: Nav & Servers) ── */}
+        <aside className="w-56 flex flex-col bg-zinc-950 border-r border-white/5 shrink-0">
+          <div className="h-12 flex items-center px-4 border-b border-white/5 gap-2">
+            <Shield className="w-4 h-4 text-cyan-500" />
+            <span className="font-bold text-white text-sm">OpenMacaw</span>
           </div>
 
-          {/* Mobile sidebar header */}
-          <div className="md:hidden flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-white/10">
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-cyan-500" />
-              <span className="font-bold text-gray-900 dark:text-white">OpenMacaw</span>
-            </div>
-            <button onClick={() => setIsMobileOpen(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg">
-              <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            </button>
-          </div>
-
-          {/* Nav items */}
-          <nav className="flex-1 p-2 flex flex-col gap-0.5 overflow-hidden">
-            {/* Configure Agent */}
-            <button
-              onClick={openAgentPanel}
-              title="Configure Agent"
-              className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-colors ${
-                isCollapsed ? 'md:justify-center' : ''
-              }`}
-            >
-              <Bot className="w-5 h-5 shrink-0" />
-              <span className={`text-sm font-medium truncate ${isCollapsed ? 'md:hidden' : ''}`}>Configure Agent</span>
-            </button>
-
-            {/* New Chat — only on /chat */}
-            {location.pathname.startsWith('/chat') && (
-              <button
-                onClick={handleNewChat}
-                title="New Chat"
-                className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-gray-600 hover:bg-green-50 hover:text-green-700 transition-colors ${
-                  isCollapsed ? 'md:justify-center' : ''
-                }`}
-              >
-                <Plus className="w-5 h-5 shrink-0" />
-                <span className={`text-sm font-medium ${isCollapsed ? 'md:hidden' : ''}`}>New Chat</span>
-              </button>
-            )}
-
-            <div className="my-1 h-px bg-gray-100 dark:bg-white/10" />
-
-            {/* Page nav */}
+          <nav className="p-2 space-y-0.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname.startsWith(item.path);
@@ -414,46 +335,91 @@ function App() {
                   key={item.path}
                   to={item.path}
                   title={item.label}
-                  className={`flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-colors ${
-                    isCollapsed ? 'md:justify-center' : ''
-                  } ${isActive ? 'bg-cyan-500/10 text-cyan-500' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
+                    isActive ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                  }`}
                 >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  <span className={`text-sm font-medium ${isCollapsed ? 'md:hidden' : ''}`}>{item.label}</span>
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="font-medium">{item.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* Collapse/Theme toggle — desktop only */}
-          <div className="hidden md:flex flex-col p-2 border-t border-gray-100 dark:border-white/10 gap-1">
+          <div className="mx-2 my-1 border-t border-white/5" />
+
+          <div className="flex-1 overflow-y-auto p-2">
+            <div className="px-1 mb-2">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-gray-500">Active Servers</span>
+            </div>
+            <div className="space-y-0.5">
+              {servers?.map((server) => (
+                <div key={server.id} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-white/5 group">
+                  <span className="text-xs font-mono text-gray-400 group-hover:text-gray-300 truncate">{server.name}</span>
+                  <div title={server.status} className={`w-1.5 h-1.5 rounded-full shrink-0 ${server.status === 'running' ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-2 border-t border-white/5 space-y-1">
             <button
-              onClick={() => setIsDark(!isDark)}
-              title={isDark ? 'Light mode' : 'Dark mode'}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-200 transition-colors ${
-                isCollapsed ? 'justify-center' : ''
-              }`}
+              onClick={() => setIsAgentPanelOpen(true)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-gray-400 hover:bg-white/5 hover:text-gray-200 transition-colors"
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              {!isCollapsed && <span className="text-xs text-gray-400 dark:text-gray-400">Theme</span>}
+              <Bot className="w-4 h-4 shrink-0" />
+              <span className="font-medium text-left">Configure Agent</span>
             </button>
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-200 transition-colors ${
-                isCollapsed ? 'justify-center' : ''
-              }`}
-            >
-              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-              {!isCollapsed && <span className="text-xs text-gray-400 dark:text-gray-400">Collapse</span>}
-            </button>
+            {location.pathname.startsWith('/chat') && (
+              <button
+                onClick={handleNewChat}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-cyan-400 hover:bg-cyan-950/30 hover:text-cyan-300 transition-colors"
+              >
+                <Plus className="w-4 h-4 shrink-0" />
+                <span className="font-medium text-left">New Chat</span>
+              </button>
+            )}
           </div>
         </aside>
 
-        {/* ── Main content ── */}
-        <main className="flex-1 overflow-auto min-w-0 pt-14 md:pt-0">
+        {/* ── Middle Pane (Wide: Main Interaction) ── */}
+        <main className="flex-1 flex flex-col min-w-0 bg-black z-0 relative">
           <Outlet />
         </main>
+
+        {/* ── Right Pane (Medium: Audit/Inspector) ── */}
+        <aside className="w-80 hidden lg:flex flex-col bg-zinc-950 border-l border-white/5 shrink-0 z-10">
+          <div className="h-12 flex items-center justify-between px-4 border-b border-white/5 bg-black">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Inspector</span>
+            <Activity className="w-3.5 h-3.5 text-gray-500" />
+          </div>
+          <div className="flex-1 p-3 font-mono text-[11px] text-gray-500 overflow-y-auto space-y-2 selection:bg-cyan-900/40">
+            {executionLogs.length === 0 ? (
+              <>
+                <div className="flex gap-2">
+                  <span className="text-gray-600">[{new Date().toISOString().split('T')[1].split('.')[0]}]</span>
+                  <span className="text-cyan-700">SYSTEM_INIT</span>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-gray-600">[{new Date().toISOString().split('T')[1].split('.')[0]}]</span>
+                  <span className="text-gray-400">Waiting for agent activity...</span>
+                </div>
+              </>
+            ) : (
+              executionLogs.map(log => (
+                <div key={log.id} className="flex gap-2 leading-relaxed">
+                  <span className="text-gray-600 shrink-0">[{log.time}]</span>
+                  <span className={`${
+                    log.type === 'success' ? 'text-green-500' :
+                    log.type === 'error' ? 'text-red-500' :
+                    'text-cyan-400 animate-pulse'
+                  }`}>{log.message}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
+
       </div>
     </>
   );

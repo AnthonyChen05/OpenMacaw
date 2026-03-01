@@ -12,7 +12,7 @@ const chatSchema = z.object({
 });
 
 export async function chatRoutes(fastify: FastifyInstance): Promise<void> {
-  fastify.get('/ws/chat', { websocket: true }, (socket, request) => {
+  fastify.get('/ws/chat', { websocket: true }, (socket, _request) => {
     console.log('[WebSocket] New connection');
     socket.on('error', (err) => {
       console.error('[WebSocket] Error:', err);

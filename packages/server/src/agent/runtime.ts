@@ -1,5 +1,5 @@
-import { getProvider, type Message, type ToolDefinition, type StreamDelta, type ToolCall } from '../llm/index.js';
-import { getAllTools, getMCPServer } from '../mcp/registry.js';
+import { getProviderForModel, type Message, type StreamDelta, type ToolCall } from '../llm/index.js';
+import { getAllTools } from '../mcp/registry.js';
 import { evaluatePermission, extractServerIdFromToolName } from '../permissions/index.js';
 import { getConfig } from '../config.js';
 import { getDb, schema } from '../db/index.js';
@@ -22,6 +22,7 @@ export type AgentEvent =
   | { type: 'tool_call_start'; tool: string; server: string; input: Record<string, unknown> }
   | { type: 'tool_call_result'; outcome: 'allowed' | 'denied'; result?: unknown; reason?: string }
   | { type: 'message_end'; usage: { inputTokens: number; outputTokens: number } }
+  | { type: 'proposal'; tool: string; input: Record<string, unknown> }
   | { type: 'error'; message: string }
   | { type: 'step_count'; count: number };
 
@@ -73,28 +74,40 @@ export class AgentRuntime {
       const tools = getAllTools();
       console.log('[Agent] Available tools:', tools.length);
       
-      const provider = getProvider();
+      const provider = getProviderForModel(this.config.model);
       
       let deltaText = '';
       
-      const result = await provider.chat(
+      let interceptedProposal = false;
+
+      await provider.chat(
         this.config.model,
         this.messages,
         tools,
-        (delta: StreamDelta) => {
+        async (delta: StreamDelta) => {
           if (delta.type === 'text_delta' && delta.content) {
             deltaText += delta.content;
             this.eventHandler({ type: 'text_delta', content: delta.content });
           } else if (delta.type === 'tool_use' && delta.toolCall) {
-            this.handleToolCall(delta.toolCall);
+            interceptedProposal = await this.handleToolCall(delta.toolCall);
+          } else if ((delta as any).type === 'clear_text') {
+            deltaText = '';
           } else if (delta.type === 'message_end' && delta.usage) {
             this.eventHandler({ type: 'message_end', usage: delta.usage });
-            this.saveMessage('assistant', deltaText, delta.usage);
+            if (deltaText) {
+              this.saveMessage('assistant', deltaText, delta.usage);
+            }
           } else if (delta.type === 'error') {
             this.eventHandler({ type: 'error', message: delta.error || 'Unknown error' });
           }
         }
       );
+
+      // Stop loop if we intercepted a tool proposal (Human-in-the-Loop breakpoint)
+      if (interceptedProposal) {
+        console.log('[Agent] Execution halted for human approval (proposal intercepted).');
+        break;
+      }
 
       if (!deltaText && this.stepCount >= this.maxSteps) {
         this.eventHandler({ type: 'error', message: 'Max steps reached' });
@@ -113,7 +126,8 @@ export class AgentRuntime {
     this.eventHandler({ type: 'step_count', count: this.stepCount });
   }
 
-  private async handleToolCall(toolCall: ToolCall): Promise<void> {
+  // Returns true if execution should halt because a proposal was emitted.
+  private async handleToolCall(toolCall: ToolCall): Promise<boolean> {
     const { serverId, toolName } = extractServerIdFromToolName(toolCall.name);
     console.log('[Agent] Tool call:', toolName, 'from server:', serverId);
 
@@ -124,7 +138,7 @@ export class AgentRuntime {
         outcome: 'denied',
         reason: 'Tool name must include server ID (server:tool)',
       });
-      return;
+      return false;
     }
 
     this.stepCount++;
@@ -161,54 +175,25 @@ export class AgentRuntime {
         toolName,
       });
 
-      return;
+      return false;
     }
 
-    try {
-      console.log('[Agent] Executing tool:', toolName);
-      const server = getMCPServer(serverId);
-      if (!server) {
-        throw new Error('Server not found');
-      }
 
-      const startTime = Date.now();
-      const result = await server.client.callTool(toolName, toolCall.input);
-      const latency = Date.now() - startTime;
+    this.messages.push({
+      role: 'assistant',
+      content: `I will now execute the ${toolName} tool. Please review and approve the action.`,
+      toolCallId: toolCall.id,
+    });
 
-      this.eventHandler({
-        type: 'tool_call_result',
-        outcome: 'allowed',
-        result,
-      });
+    await this.saveMessage('assistant', `I proposed executing ${toolCall.name} (Waiting for approval).`);
 
-      await this.logActivity(serverId, toolName, toolCall.input, 'allowed', undefined, latency);
+    this.eventHandler({
+      type: 'proposal',
+      tool: toolCall.name,
+      input: toolCall.input,
+    });
 
-      const resultStr = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-      this.messages.push({
-        role: 'tool',
-        content: resultStr,
-        toolCallId: toolCall.id,
-        toolName,
-      });
-
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      
-      this.eventHandler({
-        type: 'tool_call_result',
-        outcome: 'denied',
-        reason: errorMsg,
-      });
-
-      await this.logActivity(serverId, toolName, toolCall.input, 'denied', errorMsg);
-
-      this.messages.push({
-        role: 'tool',
-        content: `Tool call failed: ${errorMsg}`,
-        toolCallId: toolCall.id,
-        toolName,
-      });
-    }
+    return true;
   }
 
   private async saveMessage(

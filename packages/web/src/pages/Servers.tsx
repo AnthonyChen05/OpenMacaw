@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Plus, Play, Square, Trash2, Shield, Loader2 } from 'lucide-react';
+import { Plus, Play, Square, Trash2, Shield, Loader2, AlertCircle } from 'lucide-react';
 import { apiFetch } from '../api';
 
 interface Server {
@@ -24,6 +24,8 @@ export default function Servers() {
     args: '',
   });
   const queryClient = useQueryClient();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [startingId, setStartingId] = useState<string | null>(null);
 
   const { data: servers, isLoading } = useQuery<Server[]>({
     queryKey: ['servers'],
@@ -51,12 +53,27 @@ export default function Servers() {
 
   const startMutation = useMutation({
     mutationFn: async (id: string) => {
+      setStartingId(id);
+      setErrorMsg(null);
       const res = await apiFetch(`/api/servers/${id}/start`, { method: 'POST' });
+      if (!res.ok) {
+        let msg = 'Unknown connection error';
+        try {
+          const errData = await res.json();
+          msg = errData.error || errData.message || msg;
+        } catch { /* parse fail */ }
+        throw new Error(msg);
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servers'] });
+      setStartingId(null);
     },
+    onError: (error: Error) => {
+      setErrorMsg(error.message);
+      setStartingId(null);
+    }
   });
 
   const stopMutation = useMutation({
@@ -104,6 +121,19 @@ export default function Servers() {
           Add Server
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-sm font-medium text-red-500">Connection Failed</h3>
+            <p className="text-sm text-red-400 mt-1 whitespace-pre-wrap font-mono relative max-h-40 overflow-y-auto w-full break-all leading-snug">
+              {errorMsg}
+            </p>
+          </div>
+          <button onClick={() => setErrorMsg(null)} className="text-red-500/50 hover:text-red-500">×</button>
+        </div>
+      )}
 
       {showForm && (
         <div className="mb-6 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-gray-200 dark:border-white/10 shadow-sm">
@@ -211,11 +241,15 @@ export default function Servers() {
                       ) : (
                         <button
                           onClick={() => startMutation.mutate(server.id)}
-                          disabled={startMutation.isPending}
+                          disabled={startMutation.isPending && startingId !== server.id}
                           className="p-1 hover:bg-gray-100 rounded"
                           title="Start"
                         >
-                          <Play className="w-4 h-4 text-green-600" />
+                          {startMutation.isPending && startingId === server.id ? (
+                            <Loader2 className="w-4 h-4 text-cyan-600 animate-spin" />
+                          ) : (
+                            <Play className="w-4 h-4 text-green-600" />
+                          )}
                         </button>
                       )}
                       <Link

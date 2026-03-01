@@ -54,4 +54,37 @@ export function getAvailableProviders(): ProviderType[] {
   return ['anthropic', 'openai', 'ollama'];
 }
 
+export function getProviderForModel(modelName: string): LLMProvider {
+  // First try naive string matching to properly route the model
+  const lowerModel = modelName.toLowerCase();
+  
+  if (lowerModel.includes('claude')) {
+    return getProvider('anthropic');
+  }
+  
+  if (lowerModel.includes('gpt') || lowerModel.includes('o1') || lowerModel.includes('o3')) {
+    return getProvider('openai');
+  }
+  
+  const ollamaModels = ['llama', 'mistral', 'qwen', 'gemma', 'phi', 'deepseek'];
+  if (ollamaModels.some(m => lowerModel.includes(m))) {
+    return getProvider('ollama');
+  }
+
+  // If we can't guess from the model name, fallback to the user's DB default
+  try {
+    const db = getDb();
+    const settings = db.select(schema.settings as any).where().all() as any[];
+    const defaultProviderSetting = settings.find((s: any) => s.key === 'DEFAULT_PROVIDER');
+    if (defaultProviderSetting?.value) {
+      return getProvider(defaultProviderSetting.value as ProviderType);
+    }
+  } catch (e) {
+    // Ignore if DB is not initialized yet
+  }
+  
+  // Final fallback to process.env default
+  return getProvider();
+}
+
 export { type LLMProvider, type Message, type ToolDefinition, type StreamDelta, type ToolCall };

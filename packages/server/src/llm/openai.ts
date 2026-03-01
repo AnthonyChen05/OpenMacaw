@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { LLMProvider, Message, ToolDefinition, StreamDelta } from './provider.js';
 import { getConfig } from '../config.js';
+import { getDb, schema } from '../db/index.js';
 
 export class OpenAIProvider implements LLMProvider {
   name = 'openai';
@@ -12,16 +13,22 @@ export class OpenAIProvider implements LLMProvider {
     'gpt-3.5-turbo',
   ];
 
-  private client: OpenAI;
+  private client: OpenAI | null = null;
 
-  constructor() {
-    const config = getConfig();
-    if (!config.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY not configured');
+  private getClient(): OpenAI {
+    if (!this.client) {
+      const config = getConfig();
+      const db = getDb();
+      const settings = db.select(schema.settings as any).where().all() as any[];
+      const apiKeySetting = settings.find((s: any) => s.key === 'OPENAI_API_KEY');
+      const apiKey = apiKeySetting?.value || config.OPENAI_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error('OPENAI_API_KEY not configured');
+      }
+      this.client = new OpenAI({ apiKey });
     }
-    this.client = new OpenAI({
-      apiKey: config.OPENAI_API_KEY,
-    });
+    return this.client;
   }
 
   async chat(
@@ -30,17 +37,17 @@ export class OpenAIProvider implements LLMProvider {
     tools: ToolDefinition[],
     onDelta: (delta: StreamDelta) => void
   ): Promise<{ inputTokens: number; outputTokens: number }> {
-    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = messages.map(msg => {
+    const openaiMessages = messages.map((msg): OpenAI.Chat.ChatCompletionMessageParam => {
       if (msg.role === 'tool') {
         return {
-          role: 'tool' as const,
+          role: 'tool',
           content: msg.content,
-          tool_call_id: msg.toolCallId,
+          tool_call_id: msg.toolCallId || 'unknown',
         };
       }
       if (msg.role === 'system') {
         return {
-          role: 'system' as const,
+          role: 'system',
           content: msg.content,
         };
       }
@@ -59,10 +66,10 @@ export class OpenAIProvider implements LLMProvider {
       },
     }));
 
-    const stream = await this.client.chat.completions.create({
+    const stream = await this.getClient().chat.completions.create({
       model,
       messages: openaiMessages,
-      tools: openaiTools.length > 0 ? openaiTools : undefined,
+      tools: openaiTools.length > 0 ? openaiTools as any[] : undefined,
       stream: true,
     });
 
