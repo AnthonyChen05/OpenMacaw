@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Trash2, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { apiFetch, getWsUrl } from '../api';
 
 interface Message {
   id: string;
@@ -48,7 +49,7 @@ export default function Chat() {
   const { data: sessions, isLoading: sessionsLoading } = useQuery<Session[]>({
     queryKey: ['sessions'],
     queryFn: async () => {
-      const res = await fetch('/api/sessions');
+      const res = await apiFetch('/api/sessions');
       return res.json();
     },
   });
@@ -56,7 +57,7 @@ export default function Chat() {
   const { data: currentSession, isLoading: sessionLoading } = useQuery<Session>({
     queryKey: ['session', currentSessionId],
     queryFn: async () => {
-      const res = await fetch(`/api/sessions/${currentSessionId}`);
+      const res = await apiFetch(`/api/sessions/${currentSessionId}`);
       return res.json();
     },
     enabled: !!currentSessionId,
@@ -64,10 +65,10 @@ export default function Chat() {
 
   const createSessionMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/sessions', {
+      const res = await apiFetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Conversation', model: 'claude-3-5-sonnet-20241022' }),
+        body: JSON.stringify({ title: 'New Conversation' }),
       });
       return res.json();
     },
@@ -79,7 +80,7 @@ export default function Chat() {
 
   const deleteSessionMutation = useMutation({
     mutationFn: async (id: string) => {
-      await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/sessions/${id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
@@ -107,7 +108,7 @@ export default function Chat() {
   }, [currentSession?.messages, streamingContent]);
 
   const connectWebSocket = useCallback(() => {
-    const ws = new WebSocket(`ws://${window.location.host}/ws/chat`);
+    const ws = new WebSocket(getWsUrl('/ws/chat'));
     
     ws.onopen = () => {
       console.log('WebSocket connected');
@@ -192,19 +193,21 @@ export default function Chat() {
 
   return (
     <div className="flex h-full">
-      <aside className="w-56 border-r border-gray-200 bg-gray-50 flex flex-col">
-        <div className="h-14 px-3 border-b border-gray-200 flex items-center">
+      <aside className="w-56 border-r border-gray-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col shrink-0 hidden md:flex">
+        <div className="h-14 px-3 border-b border-gray-200 dark:border-white/10 flex items-center">
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Conversations</span>
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           {sessionsLoading ? (
-            <div className="p-4 text-gray-500">Loading...</div>
+            <div className="p-4 text-gray-500 dark:text-gray-400">Loading...</div>
           ) : (
             sessions?.map(session => (
               <div
                 key={session.id}
-                className={`group flex items-center justify-between px-3 py-2 rounded-lg mb-1 cursor-pointer ${
-                  currentSessionId === session.id ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-100'
+                className={`group flex items-center justify-between px-3 py-2 rounded-lg mb-1 cursor-pointer transition-colors ${
+                  currentSessionId === session.id 
+                    ? 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                 }`}
                 onClick={() => setCurrentSessionId(session.id)}
               >
@@ -216,9 +219,9 @@ export default function Chat() {
                       deleteSessionMutation.mutate(session.id);
                     }
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded"
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded transition-colors"
                 >
-                  <Trash2 className="w-4 h-4 text-gray-500" />
+                  <Trash2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
             ))
@@ -226,18 +229,18 @@ export default function Chat() {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {!currentSessionId ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
               Select or create a conversation to start
             </div>
           ) : sessionLoading ? (
             <div className="flex items-center justify-center h-full">
-              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-gray-400 dark:text-gray-500" />
             </div>
           ) : allMessages.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
               Send a message to start the conversation
             </div>
           ) : (
@@ -249,16 +252,16 @@ export default function Chat() {
                 <div
                   className={`max-w-2xl px-4 py-2 rounded-lg ${
                     msg.role === 'user'
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-cyan-600 text-white'
                       : msg.role === 'tool'
-                      ? 'bg-yellow-50 text-gray-800 border border-yellow-200'
-                      : 'bg-gray-100 text-gray-800'
+                      ? 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-800 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/20'
+                      : 'bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-gray-100'
                   }`}
                 >
                   {msg.role === 'user' ? (
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   ) : (
-                    <div className="text-sm prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:bg-gray-200 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:bg-gray-200 dark:prose-code:bg-zinc-700/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-800 prose-pre:text-gray-100">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {msg.content}
                       </ReactMarkdown>
@@ -271,21 +274,21 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex gap-2">
+        <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-950/50 backdrop-blur-md">
+          <div className="flex gap-2 max-w-4xl mx-auto">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your message..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={2}
+              className="flex-1 px-4 py-3 border border-gray-300 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 text-gray-900 dark:text-white rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500 shadow-sm"
+              rows={1}
               disabled={isStreaming}
             />
             <button
               onClick={sendMessage}
               disabled={!input.trim() || isStreaming}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-cyan-600 text-white rounded-xl hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
             >
               {isStreaming ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

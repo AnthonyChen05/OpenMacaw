@@ -1,14 +1,30 @@
-import type { LLMProvider, ProviderType } from './provider.js';
+import type { LLMProvider, ProviderType, Message, ToolDefinition, StreamDelta, ToolCall } from './provider.js';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAIProvider } from './openai.js';
 import { OllamaProvider } from './ollama.js';
 import { getConfig } from '../config.js';
+import { getDb, schema } from '../db/index.js';
 
 const providers: Map<ProviderType, LLMProvider> = new Map();
 
 export function getProvider(type?: ProviderType): LLMProvider {
   const config = getConfig();
-  const providerType = type || config.DEFAULT_PROVIDER as ProviderType;
+  let providerType = type;
+
+  if (!providerType) {
+    try {
+      const db = getDb();
+      const settings = db.select(schema.settings as any).where().all() as any[];
+      const defaultProviderSetting = settings.find((s: any) => s.key === 'DEFAULT_PROVIDER');
+      if (defaultProviderSetting?.value) {
+        providerType = defaultProviderSetting.value as ProviderType;
+      }
+    } catch (e) {
+      // Ignore if DB is not initialized yet
+    }
+  }
+
+  providerType = providerType || (config.DEFAULT_PROVIDER as ProviderType);
 
   if (providers.has(providerType)) {
     return providers.get(providerType)!;

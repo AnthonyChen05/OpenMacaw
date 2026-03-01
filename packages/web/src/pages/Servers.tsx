@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, Play, Square, Trash2, Shield, Loader2 } from 'lucide-react';
+import { apiFetch } from '../api';
 
 interface Server {
   id: string;
@@ -27,14 +28,14 @@ export default function Servers() {
   const { data: servers, isLoading } = useQuery<Server[]>({
     queryKey: ['servers'],
     queryFn: async () => {
-      const res = await fetch('/api/servers');
+      const res = await apiFetch('/api/servers');
       return res.json();
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const res = await fetch('/api/servers', {
+      const res = await apiFetch('/api/servers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -50,7 +51,7 @@ export default function Servers() {
 
   const startMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/servers/${id}/start`, { method: 'POST' });
+      const res = await apiFetch(`/api/servers/${id}/start`, { method: 'POST' });
       return res.json();
     },
     onSuccess: () => {
@@ -60,7 +61,7 @@ export default function Servers() {
 
   const stopMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/servers/${id}/stop`, { method: 'POST' });
+      const res = await apiFetch(`/api/servers/${id}/stop`, { method: 'POST' });
       return res.json();
     },
     onSuccess: () => {
@@ -70,7 +71,7 @@ export default function Servers() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await fetch(`/api/servers/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/servers/${id}`, { method: 'DELETE' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servers'] });
@@ -97,7 +98,7 @@ export default function Servers() {
         <h1 className="text-2xl font-bold text-gray-900">MCP Servers</h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500"
         >
           <Plus className="w-4 h-4" />
           Add Server
@@ -105,7 +106,7 @@ export default function Servers() {
       </div>
 
       {showForm && (
-        <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200">
+        <div className="mb-6 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-gray-200 dark:border-white/10 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Add MCP Server</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -114,7 +115,7 @@ export default function Servers() {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 required
               />
             </div>
@@ -123,7 +124,7 @@ export default function Servers() {
               <select
                 value={formData.transport}
                 onChange={(e) => setFormData({ ...formData, transport: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
               >
                 <option value="stdio">Stdio</option>
                 <option value="http">HTTP/SSE</option>
@@ -136,7 +137,7 @@ export default function Servers() {
                 value={formData.command}
                 onChange={(e) => setFormData({ ...formData, command: e.target.value })}
                 placeholder="npx"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
               />
             </div>
             <div>
@@ -146,14 +147,14 @@ export default function Servers() {
                 value={formData.args}
                 onChange={(e) => setFormData({ ...formData, args: e.target.value })}
                 placeholder='["-y", "some-mcp-server"]'
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
               />
             </div>
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={createMutation.isPending}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 disabled:opacity-50"
               >
                 {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Server'}
               </button>
@@ -174,7 +175,7 @@ export default function Servers() {
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -222,7 +223,7 @@ export default function Servers() {
                         className="p-1 hover:bg-gray-100 rounded"
                         title="Permissions"
                       >
-                        <Shield className="w-4 h-4 text-blue-600" />
+                        <Shield className="w-4 h-4 text-cyan-600" />
                       </Link>
                       <button
                         onClick={() => {

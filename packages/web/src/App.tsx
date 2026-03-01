@@ -3,8 +3,9 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   MessageSquare, Server, Activity, Settings, Shield,
-  ChevronLeft, ChevronRight, Bot, Plus, X, Save, Loader2, Menu,
+  ChevronLeft, ChevronRight, Bot, Plus, X, Save, Loader2, Menu, Moon, Sun
 } from 'lucide-react';
+import { apiFetch } from './api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ interface McpServer {
 
 // ─── AgentPanel ───────────────────────────────────────────────────────────────
 
-function AgentPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function AgentPanel({ isOpen, onClose, isCollapsed }: { isOpen: boolean; onClose: () => void; isCollapsed: boolean }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,7 +45,7 @@ function AgentPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
-      const res = await fetch('/api/settings');
+      const res = await apiFetch('/api/settings');
       const data = await res.json();
       setForm({
         AGENT_NAME: data.AGENT_NAME || '',
@@ -63,7 +64,7 @@ function AgentPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   const { data: servers, isLoading: serversLoading } = useQuery<McpServer[]>({
     queryKey: ['servers'],
     queryFn: async () => {
-      const res = await fetch('/api/servers');
+      const res = await apiFetch('/api/servers');
       return res.json();
     },
     enabled: isOpen,
@@ -71,7 +72,7 @@ function AgentPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 
   const toggleServer = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      const res = await fetch(`/api/servers/${id}`, {
+      const res = await apiFetch(`/api/servers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled }),
@@ -84,7 +85,7 @@ function AgentPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   const handleSave = async () => {
     setSaving(true);
     for (const [key, value] of Object.entries(form)) {
-      await fetch(`/api/settings/${key}`, {
+      await apiFetch(`/api/settings/${key}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value }),
@@ -101,16 +102,18 @@ function AgentPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   return (
     <>
       <div className="fixed inset-0 bg-black/25 z-40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed left-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+      <div className={`fixed top-0 h-full w-full max-w-sm bg-zinc-50 dark:bg-zinc-950 shadow-2xl z-50 flex flex-col transition-all duration-200 ease-in-out ${
+        isCollapsed ? 'left-0 md:left-14' : 'left-0 md:left-56'
+      }`}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-purple-100 rounded-lg">
-              <Bot className="w-4 h-4 text-purple-600" />
+            <div className="p-1.5 bg-cyan-500/10 rounded-lg">
+              <Bot className="w-4 h-4 text-cyan-500" />
             </div>
-            <h2 className="text-base font-semibold text-gray-900">Configure Agent</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Configure Agent</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-4 h-4 text-gray-500" />
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
@@ -239,11 +242,11 @@ function AgentPanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="px-5 py-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-zinc-900/50">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 text-sm font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-600 text-white rounded-xl hover:bg-cyan-500 disabled:opacity-50 text-sm font-medium transition-colors"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saved ? '✓ Saved!' : 'Save Changes'}
@@ -261,6 +264,23 @@ function App() {
   const [isCollapsed, setIsCollapsed] = useState(false);   // desktop collapse
   const [isMobileOpen, setIsMobileOpen] = useState(false); // mobile overlay
   const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    const savedTheme = localStorage.getItem('openmacaw-theme');
+    if (savedTheme) {
+      return savedTheme === 'dark';
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('openmacaw-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('openmacaw-theme', 'light');
+    }
+  }, [isDark]);
 
   // Close mobile menu on navigation
   useEffect(() => {
@@ -286,21 +306,21 @@ function App() {
 
   return (
     <>
-      <AgentPanel isOpen={isAgentPanelOpen} onClose={() => setIsAgentPanelOpen(false)} />
+      <AgentPanel isOpen={isAgentPanelOpen} onClose={() => setIsAgentPanelOpen(false)} isCollapsed={isCollapsed} />
 
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-gray-50 dark:bg-guardian-bg text-gray-900 dark:text-white transition-colors duration-200">
 
         {/* ── Mobile top bar ── */}
-        <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3">
+        <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-gray-200 dark:border-white/10 flex items-center px-4 gap-3">
           <button
             onClick={() => setIsMobileOpen(true)}
-            className="p-2 -ml-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-2 -ml-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
           >
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-blue-600" />
-            <span className="font-bold text-gray-900">OpenMacaw</span>
+            <Shield className="w-5 h-5 text-cyan-500" />
+            <span className="font-bold text-gray-900 dark:text-white">OpenMacaw</span>
           </div>
           {/* New chat shortcut on mobile when on /chat */}
           {location.pathname.startsWith('/chat') && (
@@ -326,7 +346,7 @@ function App() {
         <aside
           className={[
             // Base layout & styling
-            'bg-white border-r border-gray-200 flex flex-col overflow-hidden shrink-0',
+            'bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-md border-r border-gray-200 dark:border-white/10 flex flex-col overflow-hidden shrink-0',
             // Mobile: fixed overlay, slides in/out
             'fixed inset-y-0 left-0 z-50',
             isMobileOpen ? 'translate-x-0' : '-translate-x-full',
@@ -339,19 +359,19 @@ function App() {
           ].join(' ')}
         >
           {/* Logo — desktop only (mobile has top bar) */}
-          <div className={`hidden md:flex items-center h-14 px-3 border-b border-gray-200 ${isCollapsed ? 'justify-center' : 'gap-2.5'}`}>
-            <Shield className="w-5 h-5 text-blue-600 shrink-0" />
-            {!isCollapsed && <span className="text-base font-bold text-gray-900 truncate">OpenMacaw</span>}
+          <div className={`hidden md:flex items-center h-14 px-3 border-b border-gray-200 dark:border-white/10 ${isCollapsed ? 'justify-center' : 'gap-2.5'}`}>
+            <Shield className="w-5 h-5 text-cyan-500 shrink-0" />
+            {!isCollapsed && <span className="text-base font-bold text-gray-900 dark:text-white truncate">OpenMacaw</span>}
           </div>
 
           {/* Mobile sidebar header */}
-          <div className="md:hidden flex items-center justify-between h-14 px-4 border-b border-gray-200">
+          <div className="md:hidden flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-white/10">
             <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-blue-600" />
-              <span className="font-bold text-gray-900">OpenMacaw</span>
+              <Shield className="w-5 h-5 text-cyan-500" />
+              <span className="font-bold text-gray-900 dark:text-white">OpenMacaw</span>
             </div>
-            <button onClick={() => setIsMobileOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-lg">
-              <X className="w-4 h-4 text-gray-500" />
+            <button onClick={() => setIsMobileOpen(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg">
+              <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
 
@@ -383,7 +403,7 @@ function App() {
               </button>
             )}
 
-            <div className="my-1 h-px bg-gray-100" />
+            <div className="my-1 h-px bg-gray-100 dark:bg-white/10" />
 
             {/* Page nav */}
             {navItems.map((item) => {
@@ -396,7 +416,7 @@ function App() {
                   title={item.label}
                   className={`flex items-center gap-3 px-2.5 py-2.5 rounded-xl transition-colors ${
                     isCollapsed ? 'md:justify-center' : ''
-                  } ${isActive ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                  } ${isActive ? 'bg-cyan-500/10 text-cyan-500' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'}`}
                 >
                   <Icon className="w-5 h-5 shrink-0" />
                   <span className={`text-sm font-medium ${isCollapsed ? 'md:hidden' : ''}`}>{item.label}</span>
@@ -405,17 +425,27 @@ function App() {
             })}
           </nav>
 
-          {/* Collapse toggle — desktop only */}
-          <div className="hidden md:block p-2 border-t border-gray-100">
+          {/* Collapse/Theme toggle — desktop only */}
+          <div className="hidden md:flex flex-col p-2 border-t border-gray-100 dark:border-white/10 gap-1">
+            <button
+              onClick={() => setIsDark(!isDark)}
+              title={isDark ? 'Light mode' : 'Dark mode'}
+              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-200 transition-colors ${
+                isCollapsed ? 'justify-center' : ''
+              }`}
+            >
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {!isCollapsed && <span className="text-xs text-gray-400 dark:text-gray-400">Theme</span>}
+            </button>
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
               title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors ${
+              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-gray-400 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-600 dark:hover:text-gray-200 transition-colors ${
                 isCollapsed ? 'justify-center' : ''
               }`}
             >
               {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-              {!isCollapsed && <span className="text-xs text-gray-400">Collapse</span>}
+              {!isCollapsed && <span className="text-xs text-gray-400 dark:text-gray-400">Collapse</span>}
             </button>
           </div>
         </aside>
